@@ -4,31 +4,31 @@ from nltk.tokenize import word_tokenize
 
 porterStemmer = PorterStemmer()
 
-alphanum = re.compile('[^a-zA-Z0-9]')
+alphanum = re.compile('[^a-zA-Z0-9]+')
+
 
 # Returns list of words represented as an indexes in vocabulary
-def process_email(email):
-    email = lowercase(email)
-    email = strip_html(email)
-    email = normalize_urls(email)
-    email = normalize_emails(email)
-    email = normalize_numbers(email)
-    email = normalize_currency(email)
+def process_str(sample):
+    if sample is None: return []
 
-    words = tokenize(email)
+    sample = lowercase(sample)
+    sample = strip_html(sample)
+    sample = normalize_urls(sample)
+    sample = normalize_emails(sample)
+    sample = normalize_numbers(sample)
+    sample = normalize_currency(sample)
+
+    words = tokenize(sample)
     words = remove_non_words(words)
+    words = remove_empty_strings(words)
     words = stemming(words)
 
     return words
 
 
-def remove_email_headers(email):
-    return ''
-
-
 # Lower-casing - ignore capitalization
-def lowercase(email):
-    return email.lower()
+def lowercase(sample):
+    return sample.lower()
 
 
 # Stripping HTML to leave only content
@@ -44,36 +44,38 @@ def normalize_urls(email):
 
 # Normalizing Email Addresses
 # All email addresses are replaced with placeholder text
-def normalize_emails(email):
-    return re.sub('[^\s]+@[^\s]+', 'email_addr', email)
+def normalize_emails(sample):
+    return re.sub('[^\s]+@[^\s]+', 'email_addr', sample)
 
 
 # Normalizing Numbers
 # All numbers are replaced with the text “number”.
-def normalize_numbers(email):
-    return re.sub('[0-9]+', 'number', email)
+def normalize_numbers(sample):
+    return re.sub('[0-9]+', 'number', sample)
 
 
 # Normalizing currency symbols
 # Foe ex all dollar signs ($) are replaced with placeholder.
-def normalize_currency(email):
-    return re.sub('[$]+', 'currency', email)
+def normalize_currency(sample):
+    return re.sub('[$]+', 'currency', sample)
 
 
-def tokenize(email):
-    return re.split('[ @$/#.-:&*+=\[\]?!(){},\'">_<;%\\n\\t]', email)
+def tokenize(sample):
+    return re.split('[ @$/#.-:&*+=\[\]?!(){},\'">_<;%\\n\\t]', sample)
 
+
+# Removal of non-words:
+def remove_non_words(words):
+    return [word for word in words if not alphanum.match(word)]
+
+
+def remove_empty_strings(words):
+    return [i for i in words if i]
 
 # Word Stemming
 # remove morphological affixes from words, leaving only the word stem.
 def stemming(words):
     new_words = [None] * len(words)
-    for idx, word in words:
+    for idx, word in enumerate(words):
         new_words[idx] = porterStemmer.stem(word)
     return new_words
-
-
-# Removal of non-words:
-def remove_non_words(words):
-    # return list(filter(alphanum.search, words))
-    return [word for word in words if alphanum.match(word)]
