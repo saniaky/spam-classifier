@@ -1,1 +1,4 @@
 mail-parser
+sklearn
+pandas
+numpy

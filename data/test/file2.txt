@@ -1,4 +1,0 @@
-something
-from
-file2
-and maybe content from file1

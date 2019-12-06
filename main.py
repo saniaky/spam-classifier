@@ -1,12 +1,16 @@
 import os
 import numpy as np
 import pandas as pd
+import mailparser
 from sklearn import svm
 from sklearn.decomposition import PCA
-from sklearn.feature_extraction.text import CountVectorizer
 from sklearn.feature_extraction.text import TfidfVectorizer
-# https://pypi.org/project/mail-parser/
-import mailparser
+from sklearn.metrics import f1_score
+from sklearn.model_selection import train_test_split, GridSearchCV
+from sklearn.naive_bayes import GaussianNB
+from sklearn.pipeline import Pipeline
+
+from hiddenPrints import HiddenPrints
 from processEmail import process_str
 
 
@@ -20,48 +24,82 @@ def read_emails(emails_dir):
     return emails
 
 
-ham_emails = read_emails('./tmp/ham')
-spam_emails = read_emails('./tmp/spam')
+print("==> Reading emails (wait, it will take a while)...", end=' ')
+# Suppress errors from "mailparser" library
+with HiddenPrints():
+    ham_emails = read_emails('./data/ham')
+    spam_emails = read_emails('./data/spam')
 ham_emails['spam'] = 0
 spam_emails['spam'] = 1
-
-print("==> Merge 2 ham and spam emails...")
-all_emails = pd.concat([ham_emails, spam_emails])
-all_emails.reset_index(drop=True, inplace=True)
-# print(all_emails)
 print("Done")
 
-# pre-process emails
-print("==> Pre-processing emails...")
-for index, email in all_emails.iterrows():
-    if len(email['body']) > 0:
-        processed_email = process_str(email['body'])
-print("Done.")
+print("==> Merge 2 ham and spam emails...", end=' ')
+all_emails = pd.concat([ham_emails, spam_emails])
+all_emails.reset_index(drop=True, inplace=True)
+print("Done")
 
-# CountVectorizer + TfidfTransformer
-vectorizer = TfidfVectorizer(stop_words='english', lowercase=True, strip_accents='unicode')
+# TfidfVectorizer = CountVectorizer + TfidfTransformer
+#  override the built in preprocessor and tokenizer because we already did it
+print("==> Building vocabulary, prepossessing, tokenizing sentences...")
+vectorizer = TfidfVectorizer(preprocessor=process_str,
+                             tokenizer=lambda x: x,  # we already tokenized it in process_str
+                             min_df=3)
 X = vectorizer.fit_transform(all_emails['body'])
-print(vectorizer.get_feature_names())
-print(X.toarray())
-
-print("==> Reducing data dimension...", end=' ')
-pca = PCA(n_components=200)
-X_train_reduced = pca.fit_transform(X)
+# print(vectorizer.get_feature_names()[0:20])
+X = X.toarray()
 print("Done")
 
 print("==> Splitting data into train/dev/test datasets...", end=" ")
-# print("==> Vectorized version of it:\n%s\n" % vectorizer.transform([sample]))
-# X_train, X_test, y_train, y_test = train_test_split(
-#     all_data_vectorized, np.array(all_data['y']), test_size=0.2, random_state=1)
+X_train, X_tmp, y_train, y_tmp = train_test_split(
+    X, np.array(all_emails['spam']), test_size=0.3, random_state=42)
+X_dev, X_test, y_dev, y_test = train_test_split(
+    X_tmp, y_tmp, test_size=0.5, random_state=42)
 print("Done")
 
-
-print("==> Training an SVM classifier using k-fold cross validation...")
-#clf = svm.LinearSVC(C=1)
-#clf.fit(X)
-#scores = k_fold_cv(clf, X_train_reduced, y_train)
-#print("==> Accuracy: %0.2f (+/- %0.2f)" % (scores.mean(), scores.std() * 2), end=' ')
+print("==> Quick test of classifiers with default params...")
+print("Reducing data dimension using PCA (n = 300)...", end=' ')
+pca = PCA(n_components=300)
+X_train_reduced = pca.fit_transform(X)
 print("Done")
 
-print("==> Grid Search...")
+gnb = GaussianNB()
+gnb.fit(X_train, y_train)
+y_dev_predicted = gnb.predict(X_dev)
+dev_score1 = f1_score(y_dev, y_dev_predicted)
+print("[GaussianNB] DEV score: %.3f" % dev_score1)
 
+clf = svm.LinearSVC()
+clf.fit(X_train, y_train)
+y_dev_predicted = clf.predict(X_dev)
+dev_score2 = f1_score(y_dev, y_dev_predicted)
+print("[LinearSVC, C=1] DEV score: %.3f" % dev_score2)
+print("Done")
+
+print("==> Grid Search hyper-parameters...")
+svm = svm.LinearSVC(penalty='l2', max_iter=2000)
+pipe = Pipeline(steps=[('pca', pca), ('svm', svm)])
+grid_params = [{
+    'pca__n_components': [100, 200, 300, 400],
+    'svm__C': [1, 10, 50, 100],
+}]
+with HiddenPrints(): # ignore ConvergenceWarnings
+    clf = GridSearchCV(pipe, grid_params, cv=5, scoring='f1')
+clf.fit(X_train, y_train)
+print(clf)
+print("==> Best parameters set found on development set:")
+print(clf.best_params_)
+print()
+
+print("==> Grid scores on development set:")
+means = clf.cv_results_['mean_test_score']
+stds = clf.cv_results_['std_test_score']
+for mean, std, params in zip(means, stds, clf.cv_results_['params']):
+    print("%0.3f (+/-%0.03f) for %r" % (mean, std * 2, params))
+print()
+
+print("==> DEV F-1 score on best model: %.3f" % f1_score(y_dev, clf.predict(X_dev)))
+print("Done")
+
+print("==> Calculate test score...")
+print("TEST F-1 score on best model: %.3f" % f1_score(y_test, clf.predict(X_test)))
+print("Done")

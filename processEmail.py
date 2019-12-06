@@ -1,10 +1,15 @@
+import nltk
 import re
 from nltk.stem import PorterStemmer
+from nltk.corpus import stopwords
 from nltk.tokenize import word_tokenize
 
 porterStemmer = PorterStemmer()
 
 alphanum = re.compile('[^a-zA-Z0-9]+')
+nltk.download('stopwords')
+nltk.download('punkt')
+english_stopwords = stopwords.words('english')
 
 
 # Returns list of words represented as an indexes in vocabulary
@@ -21,6 +26,7 @@ def process_str(sample):
     words = tokenize(sample)
     words = remove_non_words(words)
     words = remove_empty_strings(words)
+    words = remove_stop_words(words)
     words = stemming(words)
 
     return words
@@ -61,7 +67,8 @@ def normalize_currency(sample):
 
 
 def tokenize(sample):
-    return re.split('[ @$/#.-:&*+=\[\]?!(){},\'">_<;%\\n\\t]', sample)
+    # return re.split('[ @$/#.-:&*+=\[\]?!(){},\'">_<;%\\n\\t]', sample)
+    return nltk.word_tokenize(sample, language='english', preserve_line=False)
 
 
 # Removal of non-words:
@@ -71,6 +78,11 @@ def remove_non_words(words):
 
 def remove_empty_strings(words):
     return [i for i in words if i]
+
+
+def remove_stop_words(words):
+    return [word for word in words if word not in english_stopwords]
+
 
 # Word Stemming
 # remove morphological affixes from words, leaving only the word stem.
