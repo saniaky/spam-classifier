@@ -75,20 +75,16 @@ dev_score2 = f1_score(y_dev, y_dev_predicted)
 print("[LinearSVC, C=1] DEV score: %.3f" % dev_score2)
 print("Done")
 
-print("==> Grid Search hyper-parameters...")
-svm = svm.LinearSVC(penalty='l2', max_iter=2000)
+print("==> Grid Search hyper-parameters (wait, it will take a while)...")
+svm = svm.LinearSVC(penalty='l2', max_iter=1000)
 pipe = Pipeline(steps=[('pca', pca), ('svm', svm)])
 grid_params = [{
-    'pca__n_components': [100, 200, 300, 400],
-    'svm__C': [1, 10, 50, 100],
+    'pca__n_components': [100, 300, 500],
+    'svm__C': [1, 10, 100, 1000],
 }]
-with HiddenPrints(): # ignore ConvergenceWarnings
+with HiddenPrints():  # ignore ConvergenceWarnings
     clf = GridSearchCV(pipe, grid_params, cv=5, scoring='f1')
 clf.fit(X_train, y_train)
-print(clf)
-print("==> Best parameters set found on development set:")
-print(clf.best_params_)
-print()
 
 print("==> Grid scores on development set:")
 means = clf.cv_results_['mean_test_score']
@@ -97,9 +93,9 @@ for mean, std, params in zip(means, stds, clf.cv_results_['params']):
     print("%0.3f (+/-%0.03f) for %r" % (mean, std * 2, params))
 print()
 
-print("==> DEV F-1 score on best model: %.3f" % f1_score(y_dev, clf.predict(X_dev)))
-print("Done")
+print("==> Best parameters set found on development set:")
+print(clf.best_params_)
+print()
 
-print("==> Calculate test score...")
-print("TEST F-1 score on best model: %.3f" % f1_score(y_test, clf.predict(X_test)))
-print("Done")
+print("==> DEV F-1 score on best model: %.3f" % f1_score(y_dev, clf.predict(X_dev)))
+print("==> TEST F-1 score on best model: %.3f" % f1_score(y_test, clf.predict(X_test)))
