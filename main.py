@@ -57,11 +57,6 @@ X_dev, X_test, y_dev, y_test = train_test_split(
 print("Done")
 
 print("==> Quick test of classifiers with default params...")
-print("Reducing data dimension using PCA (n = 300)...", end=' ')
-pca = PCA(n_components=300)
-X_train_reduced = pca.fit_transform(X)
-print("Done")
-
 gnb = GaussianNB()
 gnb.fit(X_train, y_train)
 y_dev_predicted = gnb.predict(X_dev)
@@ -76,7 +71,8 @@ print("[LinearSVC, C=1] DEV score: %.3f" % dev_score2)
 print("Done")
 
 print("==> Grid Search hyper-parameters (wait, it will take a while)...")
-svm = svm.LinearSVC(penalty='l2', max_iter=1000)
+pca = PCA()
+svm = svm.LinearSVC(max_iter=2000)
 pipe = Pipeline(steps=[('pca', pca), ('svm', svm)])
 grid_params = [{
     'pca__n_components': [100, 300, 500],
