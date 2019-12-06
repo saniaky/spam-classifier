@@ -50,23 +50,21 @@ X = X.toarray()
 print("Done")
 
 print("==> Splitting data into train/dev/test datasets...", end=" ")
-X_train, X_tmp, y_train, y_tmp = train_test_split(
-    X, np.array(all_emails['spam']), test_size=0.3, random_state=42)
-X_dev, X_test, y_dev, y_test = train_test_split(
-    X_tmp, y_tmp, test_size=0.5, random_state=42)
+X_train, X_test, y_train, y_test = train_test_split(
+    X, np.array(all_emails['spam']), test_size=0.3, random_state=0)
 print("Done")
 
 print("==> Quick test of classifiers with default params...")
 gnb = GaussianNB()
 gnb.fit(X_train, y_train)
-y_dev_predicted = gnb.predict(X_dev)
-dev_score1 = f1_score(y_dev, y_dev_predicted)
+y_dev_predicted = gnb.predict(X_test)
+dev_score1 = f1_score(y_test, y_dev_predicted)
 print("[GaussianNB] DEV score: %.3f" % dev_score1)
 
 clf = svm.LinearSVC()
 clf.fit(X_train, y_train)
-y_dev_predicted = clf.predict(X_dev)
-dev_score2 = f1_score(y_dev, y_dev_predicted)
+y_dev_predicted = clf.predict(X_test)
+dev_score2 = f1_score(y_test, y_dev_predicted)
 print("[LinearSVC, C=1] DEV score: %.3f" % dev_score2)
 print("Done")
 
@@ -93,5 +91,4 @@ print("==> Best parameters set found on development set:")
 print(clf.best_params_)
 print()
 
-print("==> DEV F-1 score on best model: %.3f" % f1_score(y_dev, clf.predict(X_dev)))
 print("==> TEST F-1 score on best model: %.3f" % f1_score(y_test, clf.predict(X_test)))
