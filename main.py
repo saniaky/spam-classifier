@@ -25,8 +25,7 @@ def read_emails(emails_dir):
 
 
 print("==> Reading emails (wait, it will take a while)...", end=' ')
-# Suppress errors from "mailparser" library
-with HiddenPrints():
+with HiddenPrints():  # Suppress errors from "mailparser" library
     ham_emails = read_emails('./data/ham')
     spam_emails = read_emails('./data/spam')
 ham_emails['spam'] = 0
@@ -36,6 +35,7 @@ print("Done")
 print("==> Merge 2 ham and spam emails...", end=' ')
 all_emails = pd.concat([ham_emails, spam_emails])
 all_emails.reset_index(drop=True, inplace=True)
+del ham_emails, spam_emails  # clear memory
 print("Done")
 
 # TfidfVectorizer = CountVectorizer + TfidfTransformer
