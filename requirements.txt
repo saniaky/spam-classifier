@@ -1,4 +1,9 @@
 mail-parser
-sklearn
-pandas
+nltk
+matplotlib
 numpy
+pandas
+PorterStemmer
+scikit-learn
+scipy
+sklearn

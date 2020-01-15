@@ -64,16 +64,9 @@ clf.fit(X_train, y_train)
 print("[LinearSVC, C=1] TEST score: %.3f" % f1_score(y_test, clf.predict(X_test)))
 print("Done")
 
-print("==> Grid Search hyper-parameters (wait, it will take a while)...")
-pca = PCA()
-svm = svm.LinearSVC(max_iter=2000)
-pipe = Pipeline(steps=[('pca', pca), ('svm', svm)])
-grid_params = [{
-    'pca__n_components': [100, 300, 500],
-    'svm__C': [1, 10, 100, 1000],
-}]
-with HiddenPrints():  # ignore ConvergenceWarnings
-    clf = GridSearchCV(pipe, grid_params, cv=5, scoring='f1')
+print("==> Grid Search hyper-parameters (wait, it will take about 3-5 minutes)...")
+pca = PCA(n_components=300)
+svm = svm.LinearSVC(C=10, max_iter=2000)
 clf.fit(X_train, y_train)
 
 print("==> Grid scores on development set:")
@@ -87,4 +80,4 @@ print("==> Best parameters set found on development set:")
 print(clf.best_params_)
 print()
 
-print("==> TEST F-1 score on best model: %.3f" % f1_score(y_test, clf.predict(X_test)))
+print("==> F-1 score for the TEST set with the best model: %.3f" % f1_score(y_test, clf.predict(X_test)))
